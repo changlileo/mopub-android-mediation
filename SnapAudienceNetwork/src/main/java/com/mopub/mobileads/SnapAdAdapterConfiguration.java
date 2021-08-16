@@ -12,9 +12,14 @@ import com.mopub.common.Preconditions;
 import com.mopub.common.logging.MoPubLog;
 import com.mopub.mobileads.snapaudiencenetwork.BuildConfig;
 import com.snap.adkit.dagger.AdKitApplication;
+import com.snap.adkit.external.SnapAdEventListener;
+import com.snap.adkit.external.SnapAdInitSucceeded;
 import com.snap.adkit.external.SnapAdKit;
+import com.snap.adkit.external.SnapAdKitEvent;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM_WITH_THROWABLE;
@@ -26,6 +31,12 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
     private static final String ADAPTER_VERSION = BuildConfig.VERSION_NAME;
     private static final String APP_ID_KEY = "appId";
     private static final String MOPUB_NETWORK_NAME = BuildConfig.NETWORK_NAME;
+    private static final String TEST_MODE_KEY = "enableTestMode";
+    private static final String TEST_MODE_ENABLE_VALUE = "true";
+
+    private SnapAdKit snapAdKit;
+    private final AtomicReference<String> tokenReference = new AtomicReference((Object)null);
+    private final AtomicBoolean isComputingToken = new AtomicBoolean(false);
 
     @NonNull
     @Override
@@ -36,7 +47,8 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
     @Nullable
     @Override
     public String getBiddingToken(@NonNull Context context) {
-        return null;
+        this.refreshBidderToken();
+        return tokenReference.get();
     }
 
     @NonNull
@@ -66,9 +78,24 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
                     AdKitApplication.init(context);
 
                     final String appId = configuration.get(APP_ID_KEY);
+                    Boolean isTestModeEnable = false;
+                    String testModeSetting = (String)configuration.get(TEST_MODE_KEY);
+                    if (!TextUtils.isEmpty(testModeSetting)) {
+                        if (testModeSetting.equalsIgnoreCase(TEST_MODE_ENABLE_VALUE)) {
+                            isTestModeEnable = true;
+                        }
+                    }
 
-                    final SnapAdKit snapAdKit = AdKitApplication.getSnapAdKit();
-                    snapAdKit.init();
+                    snapAdKit = AdKitApplication.getSnapAdKit();
+                    snapAdKit.setupListener(new SnapAdEventListener() {
+                        @Override
+                        public void onEvent(SnapAdKitEvent snapAdKitEvent, String slotId) {
+                            if (snapAdKitEvent instanceof SnapAdInitSucceeded) {
+                                tokenReference.set(snapAdKit.requestBidToken());
+                            }
+                        }
+                    });
+                    snapAdKit.init(isTestModeEnable);
 
                     if (!TextUtils.isEmpty(appId)) {
                         MoPubLog.log(CUSTOM, ADAPTER_NAME, "Initializing Snap Ad Kit.");
@@ -97,5 +124,22 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
                     MoPubErrorCode.ADAPTER_CONFIGURATION_ERROR);
             MoPubLog.log(CUSTOM, ADAPTER_NAME, ADAPTER_CONFIGURATION_ERROR);
         }
+    }
+
+
+    private void refreshBidderToken() {
+        if (this.isComputingToken.compareAndSet(false, true)) {
+            (new Thread(new Runnable() {
+                public void run() {
+                    String token = snapAdKit.requestBidToken();
+                    if (token != null) {
+                        SnapAdAdapterConfiguration.this.tokenReference.set(token);
+                    }
+
+                    SnapAdAdapterConfiguration.this.isComputingToken.set(false);
+                }
+            })).start();
+        }
+
     }
 }

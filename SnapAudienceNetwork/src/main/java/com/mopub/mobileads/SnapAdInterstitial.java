@@ -136,7 +136,8 @@ public class SnapAdInterstitial extends BaseAd {
         mSnapAdAdapterConfiguration.setCachedInitializationParameters(context, extras);
         MoPubLog.log(getAdNetworkId(), LOAD_ATTEMPTED, ADAPTER_NAME);
 
-        snapAdKit.loadInterstitial(mSlotId, null);
+        String adMarkup = (String)extras.get("adm");
+        snapAdKit.loadInterstitial(mSlotId, adMarkup);
     }
 
     @Override

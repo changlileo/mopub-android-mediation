@@ -148,7 +148,8 @@ public class SnapAdRewardedVideo extends BaseAd {
         mSnapAdAdapterConfiguration.setCachedInitializationParameters(context, extras);
         MoPubLog.log(getAdNetworkId(), LOAD_ATTEMPTED, ADAPTER_NAME);
 
-        snapAdKit.loadRewarded(mSlotId, null);
+        String adMarkup = (String)extras.get("adm");
+        snapAdKit.loadRewarded(mSlotId, adMarkup);
     }
 
     @Override

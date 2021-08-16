@@ -157,7 +157,8 @@ public class SnapAdBanner extends BaseAd {
             }
         });
 
-        mBannerView.loadAd(mSlotId, null);
+        String adMarkup = (String)extras.get("adm");
+        mBannerView.loadAd(mSlotId, adMarkup);
     }
 
     private SnapAdSize getAdSize(String adUnitFormat) {
