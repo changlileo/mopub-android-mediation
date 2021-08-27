@@ -11,10 +11,16 @@ import com.mopub.common.OnNetworkInitializationFinishedListener;
 import com.mopub.common.Preconditions;
 import com.mopub.common.logging.MoPubLog;
 import com.mopub.mobileads.snapaudiencenetwork.BuildConfig;
-import com.snap.adkit.dagger.AdKitApplication;
-import com.snap.adkit.external.SnapAdKit;
+import com.snap.adkit.external.AdKitAudienceAdsNetwork;
+import com.snap.adkit.external.AudienceNetworkAdsApi;
+import com.snap.adkit.external.NetworkInitSettings;
+import com.snap.adkit.external.SnapAdEventListener;
+import com.snap.adkit.external.SnapAdInitSucceeded;
+import com.snap.adkit.external.SnapAdKitEvent;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM_WITH_THROWABLE;
@@ -25,7 +31,11 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
     private static final String ADAPTER_NAME = SnapAdAdapterConfiguration.class.getSimpleName();
     private static final String ADAPTER_VERSION = BuildConfig.VERSION_NAME;
     private static final String APP_ID_KEY = "appId";
+    private static final String TEST_MODE_KEY = "enableTestMode";
+    private static final String TEST_MODE_ENABLE_VALUE = "true";
     private static final String MOPUB_NETWORK_NAME = BuildConfig.NETWORK_NAME;
+    private final AtomicReference<String> tokenReference = new AtomicReference((Object)null);
+    private final AtomicBoolean isComputingToken = new AtomicBoolean(false);
 
     @NonNull
     @Override
@@ -36,7 +46,8 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
     @Nullable
     @Override
     public String getBiddingToken(@NonNull Context context) {
-        return null;
+        this.refreshBidderToken();
+        return tokenReference.get();
     }
 
     @NonNull
@@ -63,28 +74,43 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
         synchronized (SnapAdAdapterConfiguration.class) {
             try {
                 if (configuration != null && !configuration.isEmpty()) {
-                    AdKitApplication.init(context);
-
                     final String appId = configuration.get(APP_ID_KEY);
-
-                    final SnapAdKit snapAdKit = AdKitApplication.getSnapAdKit();
-                    snapAdKit.init();
-
-                    if (!TextUtils.isEmpty(appId)) {
-                        MoPubLog.log(CUSTOM, ADAPTER_NAME, "Initializing Snap Ad Kit.");
-
-                        snapAdKit.register(appId, null);
-                        networkInitializationSucceeded = true;
-                    } else {
-                        MoPubLog.log(CUSTOM, ADAPTER_NAME, "Snap Ad Kit's initialization not " +
-                                "started the app ID is null/empty. Make sure you pass in a valid " +
-                                "app ID via .withMediatedNetworkConfiguration() when initializing " +
-                                "the MoPub SDK.");
+                    Boolean isTestModeEnable = false;
+                    String testModeSetting = configuration.get(TEST_MODE_KEY);
+                    if (!TextUtils.isEmpty(testModeSetting)) {
+                        if (testModeSetting.equalsIgnoreCase(TEST_MODE_ENABLE_VALUE)) {
+                            isTestModeEnable = true;
+                        }
                     }
+
+                    SnapAdEventListener snapAdEventListener = new SnapAdEventListener() {
+                        @Override
+                        public void onEvent(SnapAdKitEvent snapAdKitEvent, String slotId) {
+                            if (snapAdKitEvent instanceof SnapAdInitSucceeded) {
+                                tokenReference.set(
+                                        AdKitAudienceAdsNetwork.getAdsNetwork().requestBidToken());
+                            }
+                        }
+                    };
+                    NetworkInitSettings initSettings =
+                            AdKitAudienceAdsNetwork.buildNetworkInitSettings(context)
+                                    .withAppId(appId)
+                                    .withTestModeEnabled(isTestModeEnable)
+                                    .withSnapAdEventListener(snapAdEventListener)
+                                    .build();
+                    AudienceNetworkAdsApi adsNetworkApi = AdKitAudienceAdsNetwork.init(initSettings);
+                    if (adsNetworkApi == null) {
+                        listener.onNetworkInitializationFinished(SnapAdAdapterConfiguration.class,
+                                MoPubErrorCode.ADAPTER_CONFIGURATION_ERROR);
+                        MoPubLog.log(CUSTOM, ADAPTER_NAME, ADAPTER_CONFIGURATION_ERROR);
+                        return;
+                    }
+                    networkInitializationSucceeded = true;
                 }
             } catch (Exception e) {
                 MoPubLog.log(CUSTOM_WITH_THROWABLE, "Initializing Snap Ad Kit has encountered " +
                         "an exception.", e);
+                networkInitializationSucceeded = false;
             }
         }
 
@@ -96,6 +122,24 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
             listener.onNetworkInitializationFinished(SnapAdAdapterConfiguration.class,
                     MoPubErrorCode.ADAPTER_CONFIGURATION_ERROR);
             MoPubLog.log(CUSTOM, ADAPTER_NAME, ADAPTER_CONFIGURATION_ERROR);
+        }
+    }
+
+    private void refreshBidderToken() {
+        if (AdKitAudienceAdsNetwork.getAdsNetwork() == null) {
+            return;
+        }
+        if (this.isComputingToken.compareAndSet(false, true)) {
+            (new Thread(new Runnable() {
+                public void run() {
+                    String token = AdKitAudienceAdsNetwork.getAdsNetwork().requestBidToken();
+                    if (token != null) {
+                        SnapAdAdapterConfiguration.this.tokenReference.set(token);
+                    }
+
+                    SnapAdAdapterConfiguration.this.isComputingToken.set(false);
+                }
+            })).start();
         }
     }
 }
