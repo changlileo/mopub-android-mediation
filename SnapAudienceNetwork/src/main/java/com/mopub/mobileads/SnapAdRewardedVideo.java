@@ -29,6 +29,7 @@ import com.snap.adkit.external.SnapAdVisible;
 
 import java.util.Map;
 
+import static com.mopub.common.DataKeys.ADM_KEY;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CLICKED;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM_WITH_THROWABLE;
@@ -157,8 +158,8 @@ public class SnapAdRewardedVideo extends BaseAd {
         mSnapAdAdapterConfiguration.setCachedInitializationParameters(context, extras);
         MoPubLog.log(getAdNetworkId(), LOAD_ATTEMPTED, ADAPTER_NAME);
 
-        String adMarkup = extras.get("adm");
-        String appId = extras.get(APP_ID_KEY);
+        final String adMarkup = extras.get(ADM_KEY);
+        final String appId = extras.get(APP_ID_KEY);
         LoadAdConfig loadAdConfig = new LoadAdConfigBuilder()
                 .withPublisherSlotId(mSlotId).withBid(adMarkup).withAppId(appId).build();
         adsNetworkApi.loadRewarded(loadAdConfig);
@@ -173,11 +174,11 @@ public class SnapAdRewardedVideo extends BaseAd {
         } catch (Exception exception) {
             MoPubLog.log(getAdNetworkId(), CUSTOM_WITH_THROWABLE, ADAPTER_NAME, exception);
             MoPubLog.log(getAdNetworkId(), SHOW_FAILED, ADAPTER_NAME,
-                    MoPubErrorCode.VIDEO_PLAYBACK_ERROR.getIntCode(),
-                    MoPubErrorCode.VIDEO_PLAYBACK_ERROR);
+                    MoPubErrorCode.AD_SHOW_ERROR.getIntCode(),
+                    MoPubErrorCode.AD_SHOW_ERROR);
 
             if (mInteractionListener != null) {
-                mInteractionListener.onAdFailed(VIDEO_PLAYBACK_ERROR);
+                mInteractionListener.onAdFailed(MoPubErrorCode.AD_SHOW_ERROR);
             }
         }
     }

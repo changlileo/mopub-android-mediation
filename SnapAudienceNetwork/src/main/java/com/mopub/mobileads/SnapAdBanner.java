@@ -27,6 +27,7 @@ import com.snap.adkit.external.SnapBannerAdImpressionRecorded;
 
 import java.util.Map;
 
+import static com.mopub.common.DataKeys.ADM_KEY;
 import static com.mopub.common.DataKeys.ADUNIT_FORMAT;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CLICKED;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM;
@@ -160,8 +161,8 @@ public class SnapAdBanner extends BaseAd {
             }
         });
 
-        String adMarkup = extras.get("adm");
-        String appId = extras.get(APP_ID_KEY);
+        final String adMarkup = extras.get(ADM_KEY);
+        final String appId = extras.get(APP_ID_KEY);
         LoadAdConfig loadAdConfig = new LoadAdConfigBuilder()
                 .withPublisherSlotId(mSlotId).withBid(adMarkup).withAppId(appId).build();
         mBannerView.loadAd(loadAdConfig);

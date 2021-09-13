@@ -27,6 +27,7 @@ import com.snap.adkit.external.SnapAdVisible;
 
 import java.util.Map;
 
+import static com.mopub.common.DataKeys.ADM_KEY;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CLICKED;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.CUSTOM;
 import static com.mopub.common.logging.MoPubLog.AdapterLogEvent.DID_DISAPPEAR;
@@ -145,8 +146,8 @@ public class SnapAdInterstitial extends BaseAd {
         mSnapAdAdapterConfiguration.setCachedInitializationParameters(context, extras);
         MoPubLog.log(getAdNetworkId(), LOAD_ATTEMPTED, ADAPTER_NAME);
 
-        String adMarkup = extras.get("adm");
-        String appId = extras.get(APP_ID_KEY);
+        final String adMarkup = extras.get(ADM_KEY);
+        final String appId = extras.get(APP_ID_KEY);
         LoadAdConfig loadAdConfig = new LoadAdConfigBuilder()
                 .withPublisherSlotId(mSlotId).withBid(adMarkup).withAppId(appId).build();
         adsNetworkApi.loadInterstitial(loadAdConfig);
@@ -162,11 +163,11 @@ public class SnapAdInterstitial extends BaseAd {
             MoPubLog.log(getAdNetworkId(), CUSTOM, ADAPTER_NAME, "Failed to show Snap " +
                     "Audience Network Ads");
             MoPubLog.log(getAdNetworkId(), SHOW_FAILED, ADAPTER_NAME,
-                    MoPubErrorCode.NETWORK_NO_FILL.getIntCode(),
-                    MoPubErrorCode.NETWORK_NO_FILL);
+                    MoPubErrorCode.AD_SHOW_ERROR.getIntCode(),
+                    MoPubErrorCode.AD_SHOW_ERROR);
 
             if (mInteractionListener != null) {
-                mInteractionListener.onAdFailed((NETWORK_NO_FILL));
+                mInteractionListener.onAdFailed((MoPubErrorCode.AD_SHOW_ERROR));
             }
         }
     }

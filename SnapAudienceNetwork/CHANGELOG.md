@@ -1,4 +1,7 @@
 ## Changelog
+* 2.1.0.0
+    * This version of the adapters has been certified with Snap Audience Network 2.1.0 and MoPub SDK 5.18.0.
+    * Add Advanced Bidding support.
 
   * 1.2.0.0
     * This version of the adapters has been certified with Snap Audience Network 1.2.0 and MoPub SDK 5.17.0.

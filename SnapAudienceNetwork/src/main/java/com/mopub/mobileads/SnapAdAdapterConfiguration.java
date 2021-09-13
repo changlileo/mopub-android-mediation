@@ -34,7 +34,7 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
     private static final String TEST_MODE_KEY = "enableTestMode";
     private static final String TEST_MODE_ENABLE_VALUE = "true";
     private static final String MOPUB_NETWORK_NAME = BuildConfig.NETWORK_NAME;
-    private final AtomicReference<String> tokenReference = new AtomicReference((Object)null);
+    private final AtomicReference<String> tokenReference = new AtomicReference((Object) null);
     private final AtomicBoolean isComputingToken = new AtomicBoolean(false);
 
     @NonNull
@@ -76,7 +76,8 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
                 if (configuration != null && !configuration.isEmpty()) {
                     final String appId = configuration.get(APP_ID_KEY);
                     Boolean isTestModeEnable = false;
-                    String testModeSetting = configuration.get(TEST_MODE_KEY);
+                    final String testModeSetting = configuration.get(TEST_MODE_KEY);
+
                     if (!TextUtils.isEmpty(testModeSetting)) {
                         if (testModeSetting.equalsIgnoreCase(TEST_MODE_ENABLE_VALUE)) {
                             isTestModeEnable = true;
@@ -87,18 +88,18 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
                         @Override
                         public void onEvent(SnapAdKitEvent snapAdKitEvent, String slotId) {
                             if (snapAdKitEvent instanceof SnapAdInitSucceeded) {
-                                tokenReference.set(
-                                        AdKitAudienceAdsNetwork.getAdsNetwork().requestBidToken());
+                                tokenReference.set(AdKitAudienceAdsNetwork.getAdsNetwork().requestBidToken());
                             }
                         }
                     };
-                    NetworkInitSettings initSettings =
+
+                    final NetworkInitSettings initSettings =
                             AdKitAudienceAdsNetwork.buildNetworkInitSettings(context)
                                     .withAppId(appId)
                                     .withTestModeEnabled(isTestModeEnable)
                                     .withSnapAdEventListener(snapAdEventListener)
                                     .build();
-                    AudienceNetworkAdsApi adsNetworkApi = AdKitAudienceAdsNetwork.init(initSettings);
+                    final AudienceNetworkAdsApi adsNetworkApi = AdKitAudienceAdsNetwork.init(initSettings);
                     if (adsNetworkApi == null) {
                         listener.onNetworkInitializationFinished(SnapAdAdapterConfiguration.class,
                                 MoPubErrorCode.ADAPTER_CONFIGURATION_ERROR);
@@ -127,12 +128,13 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
 
     private void refreshBidderToken() {
         if (AdKitAudienceAdsNetwork.getAdsNetwork() == null) {
+            MoPubLog.log(CUSTOM, ADAPTER_NAME, "Refresh token is not available");
             return;
         }
         if (this.isComputingToken.compareAndSet(false, true)) {
             (new Thread(new Runnable() {
                 public void run() {
-                    String token = AdKitAudienceAdsNetwork.getAdsNetwork().requestBidToken();
+                    final String token = AdKitAudienceAdsNetwork.getAdsNetwork().requestBidToken();
                     if (token != null) {
                         SnapAdAdapterConfiguration.this.tokenReference.set(token);
                     }
