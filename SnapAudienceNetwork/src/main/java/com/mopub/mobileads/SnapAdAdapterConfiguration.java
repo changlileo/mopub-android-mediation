@@ -32,7 +32,8 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
     private static final String ADAPTER_VERSION = BuildConfig.VERSION_NAME;
     private static final String APP_ID_KEY = "appId";
     private static final String TEST_MODE_KEY = "enableTestMode";
-    private static final String TEST_MODE_ENABLE_VALUE = "true";
+    private static final String TRUE_VALUE = "true";
+    private static final String RXJAVA_ERROR_HANDLE_OPT_OUT_KEY = "optOutRxJavaErrorHandling";
     private static final String MOPUB_NETWORK_NAME = BuildConfig.NETWORK_NAME;
     private final AtomicReference<String> tokenReference = new AtomicReference((Object) null);
     private final AtomicBoolean isComputingToken = new AtomicBoolean(false);
@@ -79,8 +80,17 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
                     final String testModeSetting = configuration.get(TEST_MODE_KEY);
 
                     if (!TextUtils.isEmpty(testModeSetting)) {
-                        if (testModeSetting.equalsIgnoreCase(TEST_MODE_ENABLE_VALUE)) {
+                        if (testModeSetting.equalsIgnoreCase(TRUE_VALUE)) {
                             isTestModeEnable = true;
+                        }
+                    }
+
+                    Boolean optOutRxJavaErrorHandling = false;
+                    final String rxJavaErrorHandlingOptOut = configuration.get(RXJAVA_ERROR_HANDLE_OPT_OUT_KEY);
+
+                    if (!TextUtils.isEmpty(rxJavaErrorHandlingOptOut)) {
+                        if (rxJavaErrorHandlingOptOut.equalsIgnoreCase(TRUE_VALUE)) {
+                            optOutRxJavaErrorHandling = true;
                         }
                     }
 
@@ -97,6 +107,7 @@ public class SnapAdAdapterConfiguration extends BaseAdapterConfiguration {
                             AdKitAudienceAdsNetwork.buildNetworkInitSettings(context)
                                     .withAppId(appId)
                                     .withTestModeEnabled(isTestModeEnable)
+                                    .withOptOutRxJavaErrorHandling(optOutRxJavaErrorHandling)
                                     .withSnapAdEventListener(snapAdEventListener)
                                     .build();
                     final AudienceNetworkAdsApi adsNetworkApi = AdKitAudienceAdsNetwork.init(initSettings);
